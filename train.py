@@ -158,10 +158,25 @@ with active_session():
                 running_loss = 0
                 vgg.train()
 
-checkpoint = {'input_size': imputsize,
-              'output_size': outsize,
+hidden_layers = [h1size,h2size]
+batch_size = imputsize
+lr = alpha
+model_name = args.arch
+epoch = args.epochs
+vgg.class_to_idx = train_data.class_to_idx
+
+checkpoint = {'input_size': (3, 224, 224),
+              'output_size': 102,
+              'hidden_layers': hidden_layers,
+              'batch_size': batch_size,
+              'learning_rate': lr,
+              'model_name': model_name,
               'state_dict': vgg.state_dict(),
-              'classifier': classifier,
-              'class_to_idx': train_data.class_to_idx, }
+              'optimizer': optimizer.state_dict(),
+              'classifier':vgg.classifier,
+              'epoch': epochs,
+              'class_to_idx': vgg.class_to_idx}
+
+torch.save(checkpoint, 'checkpoint.pth')
 
 torch.save(checkpoint, args.save_dir)

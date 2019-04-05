@@ -20,22 +20,30 @@ parser.add_argument('--category_names', help='Mapping flower names.', default = 
 parser.add_argument('--gpu', help='Option for GPU computing.', default = True)
 args = parser.parse_args()
 
-def load_previous_model(filename, lr = 0.001):
+def load_previous_model(filename):
     
     loaddata = torch.load(filename)
-    #print(loaddata.keys())
-    #print(loaddata['class_to_idx'])
-    
-    model = models.vgg16(pretrained=True)
+
+    model_name = loaddata['model_name']
+    #print(model_name)
+    if model_name == "vgg13":
+        model = models.vgg13(pretrained=True)
+    else:
+        model = models.vgg16(pretrained=True)
+        
+    model.input_size = loaddata['input_size']
+    model.output_size = loaddata['output_size']
+    model.hidden_layers = loaddata['hidden_layers']
+    model.batch_size = loaddata['batch_size']
+    model.learning_rate = loaddata['learning_rate']
     model.classifier = loaddata['classifier']
     model.load_state_dict(loaddata['state_dict'])
+    model.epoch = loaddata["epoch"]
+    model.optimizer = loaddata['optimizer']
     model.class_to_idx = loaddata['class_to_idx']
-    if args.gpu:
-        model.to('cuda')
-    else:
-        model.to('cpu')
+    model.to('cuda')
 
-    optimizer = optim.Adam(model.classifier.parameters(), lr)
+    optimizer = optim.Adam(model.classifier.parameters(), model.learning_rate)
     
     return model
 
@@ -119,17 +127,17 @@ prob, names = predict(args.imagepwd,newmodel, args.top_k)
 
 # change indices to class names
 # import mapping
+
+# Reverse the dict
+idx_to_class = {val: key for key, val in newmodel.class_to_idx.items()}
+# Get the correct indices
+top_classes = [idx_to_class[each] for each in names[0].cpu().numpy()]
+# get the corresponding names
 import json
 if args.category_names:
     with open(args.category_names, 'r') as f:
         cat_to_name = json.load(f)
-   
-    y_names = []
-    yn = names[0].cpu().numpy()
-    for item in yn:
-        flowername = cat_to_name[str(item)]
-        y_names.append(flowername)
-    names = y_names
+    names = [cat_to_name[each] for each in top_classes]
 
-print(prob)
-print(names)
+print(prob.cpu().numpy())
+print(names.cpu().numpy())
